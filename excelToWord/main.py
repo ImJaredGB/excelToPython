@@ -115,7 +115,38 @@ def ordenar_alumnos(alumnos):
 
 # Leer hoja 2 del excel - datos de control
 def leer_datos_control(archivo_xls):
-    libro = load_workbook
+    libro = load_workbook(archivo_xls, data_only=True)
+
+    # Segunda hoja
+    hoja = libro.worksheets[1]
+
+    print(f"Hoja de datos de control: {hoja.title}")
+
+    datos_control = []
+
+    for numero_fila, fila in enumerate(hoja.iter_rows(), start=1):
+        # Leer celdas con contenido
+        celdas_con_valor = [
+            celda
+            for celda in fila
+            if celda.value is not None and str(celda.value).strip()
+        ]
+
+        # Ignora filas sin datos
+        if len(celdas_con_valor) < 2:
+            continue
+
+        etiqueta = str(celdas_con_valor[0].value).strip()
+        valor = str(celdas_con_valor[-1].value).strip()
+
+        datos_control.append({
+            "fila_excel": numero_fila,
+            "etiqueta": etiqueta,
+            "valor": valor,
+        })
+
+    libro.close()
+    return datos_control
 
 # Validar si las selecciones fueron correctas
 if carpeta_destino is None:
@@ -132,8 +163,13 @@ else:
 
 alumnos = leer_alumnos(archivo_xls)
 alumnos = ordenar_alumnos(alumnos)
-
 print(f"\nSe han leído {len(alumnos)} alumnos:\n")
+
+datos_control = leer_datos_control(archivo_xls)
+print("\nDATOS DEL CONTROL:\n")
 
 for alumno in alumnos:
     print(alumno)
+
+for dato in datos_control:
+    print(f'{dato["etiqueta"]}: {dato["valor"]}')
