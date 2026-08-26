@@ -2,6 +2,10 @@ from pathlib import Path
 from tkinter import filedialog
 from openpyxl import load_workbook
 from unicodedata import normalize
+from docx import Document
+from docx.shared import Pt
+from docx.oxml.ns import qn
+from shutil import copy2
 
 import tkinter as tk
 
@@ -148,6 +152,39 @@ def leer_datos_control(archivo_xls):
     libro.close()
     return datos_control
 
+# Creacion del documento 
+PLANTILLA = Path(__file__).with_name("plantilla_control.docx")
+def obtener_dato_por_fila(datos_control, fila_excel):
+    for dato in datos_control:
+        if dato["fila_excel"] == fila_excel:
+            return dato["valor"]
+
+    return ""
+
+def crear_documento_desde_plantilla(carpeta_destino, datos_control, alumnos):
+    if not PLANTILLA.exists():
+        raise FileNotFoundError(
+            "No se encontro la plantilla"
+        )
+
+    numero_homologacion = obtener_dato_por_fila(datos_control, 2)
+    fecha_inicio = obtener_dato_por_fila(datos_control, 10)
+
+    # Evita barras "/" en la fecha
+    fecha_archivo = fecha_inicio.replace("/", "")
+
+    nombre_archivo = f"{numero_homologacion}_{fecha_archivo}.docx"
+    ruta_word = carpeta_destino / nombre_archivo
+
+    # Copia el documento sin modificar diseño
+    copy2(PLANTILLA, ruta_word)
+
+    print(f"\nDocumento creado correctamente:\n{ruta_word}")
+
+def configurar_run(run, negrita=False, tamaño=10):
+    run.font.name="Arial"
+    run._element.rPr
+
 # Validar si las selecciones fueron correctas
 if carpeta_destino is None:
     print("Operacion cancelada")
@@ -167,6 +204,12 @@ print(f"\nSe han leído {len(alumnos)} alumnos:\n")
 
 datos_control = leer_datos_control(archivo_xls)
 print("\nDATOS DEL CONTROL:\n")
+
+crear_documento_desde_plantilla(
+    carpeta_destino,
+    datos_control,
+    alumnos
+)
 
 for alumno in alumnos:
     print(alumno)
