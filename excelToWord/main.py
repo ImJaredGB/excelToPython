@@ -53,6 +53,8 @@ def normalizar_texto(valor):
     )
 
 # Obtener datos de los alumnos
+FILA_INICIAL = 3
+FILA_FINAL = 22
 def leer_alumnos(archivo_xls):
     libro = load_workbook(archivo_xls, data_only=True)
     hoja = libro.active
@@ -80,7 +82,7 @@ def leer_alumnos(archivo_xls):
 
     alumnos = []
 
-    for fila in hoja.iter_rows(min_row=2, values_only=True):
+    for fila in hoja.iter_rows(min_row=FILA_INICIAL, max_row=FILA_FINAL, values_only=True):
         apellido_1 = fila[encabezados["1 COGNOM"] - 1]
         apellido_2 = fila[encabezados["2 COGNOM"] - 1]
         nombre = fila[encabezados["NOM"] - 1]
@@ -92,13 +94,28 @@ def leer_alumnos(archivo_xls):
 
         alumnos.append({
             "apellido_1": str(apellido_1 or "").strip(),
-            "apellido_2": str(nombre or "").strip(),
+            "apellido_2": str(apellido_2 or "").strip(),
+            "nombre": str(nombre or "").strip(),
             "nif": str(nif or "").strip(),
         })
 
     libro.close()
     return alumnos
 
+# Ordenar por apellidos a los alumnos
+def ordenar_alumnos(alumnos):
+    return sorted(
+        alumnos,
+        key=lambda alumno:(
+            normalizar_texto(alumno["apellido_1"]),
+            normalizar_texto(alumno["apellido_2"]),
+            normalizar_texto(alumno["nombre"]),
+        )
+    )
+
+# Leer hoja 2 del excel - datos de control
+def leer_datos_control(archivo_xls):
+    libro = load_workbook
 
 # Validar si las selecciones fueron correctas
 if carpeta_destino is None:
@@ -114,6 +131,7 @@ else:
         print(f"Archivo seleccionado: {archivo_xls.name}")
 
 alumnos = leer_alumnos(archivo_xls)
+alumnos = ordenar_alumnos(alumnos)
 
 print(f"\nSe han leído {len(alumnos)} alumnos:\n")
 
