@@ -164,26 +164,254 @@ def obtener_dato_por_fila(datos_control, fila_excel):
 def crear_documento_desde_plantilla(carpeta_destino, datos_control, alumnos):
     if not PLANTILLA.exists():
         raise FileNotFoundError(
-            "No se encontro la plantilla"
+            "No se encontró «plantilla_control.docx» junto a main.py."
         )
 
     numero_homologacion = obtener_dato_por_fila(datos_control, 2)
     fecha_inicio = obtener_dato_por_fila(datos_control, 10)
 
-    # Evita barras "/" en la fecha
     fecha_archivo = fecha_inicio.replace("/", "")
-
     nombre_archivo = f"{numero_homologacion}_{fecha_archivo}.docx"
     ruta_word = carpeta_destino / nombre_archivo
 
-    # Copia el documento sin modificar diseño
+    # 1. Copiamos el diseño original.
     copy2(PLANTILLA, ruta_word)
+
+    # 2. Abrimos la copia, nunca el archivo de plantilla.
+    documento = Document(ruta_word)
+
+    # La primera tabla contiene cabecera, curso y asistentes.
+    tabla = documento.tables[0]
+    filas = tabla.rows
+
+    # --- Datos del centro ---
+    escribir_etiqueta_valor(
+        primer_parrafo_util(filas[1].cells[0]),
+        "Número d’homologació del curs",
+        numero_homologacion
+    )
+
+    escribir_etiqueta_valor(
+        primer_parrafo_util(filas[2].cells[0]),
+        "Número identificació del centre",
+        obtener_dato_por_fila(datos_control, 3)
+    )
+
+    escribir_texto(
+        primer_parrafo_util(filas[3].cells[0]),
+        "Nom del centre",
+        tamaño=8
+    )
+    escribir_texto(
+        filas[3].cells[0].paragraphs[-1],
+        obtener_dato_por_fila(datos_control, 4),
+        tamaño=10
+    )
+
+    escribir_texto(
+        primer_parrafo_util(filas[4].cells[0]),
+        "Adreça postal",
+        tamaño=8
+    )
+    escribir_texto(
+        filas[4].cells[0].paragraphs[-1],
+        obtener_dato_por_fila(datos_control, 5),
+        tamaño=10
+    )
+
+    escribir_texto(
+        primer_parrafo_util(filas[5].cells[0]),
+        "Codi postal",
+        tamaño=8
+    )
+    escribir_texto(
+        filas[5].cells[0].paragraphs[-1],
+        obtener_dato_por_fila(datos_control, 6),
+        tamaño=10
+    )
+
+    escribir_texto(
+        primer_parrafo_util(filas[5].cells[5]),
+        "Localitat",
+        tamaño=8
+    )
+    escribir_texto(
+        filas[5].cells[5].paragraphs[-1],
+        obtener_dato_por_fila(datos_control, 7),
+        tamaño=10
+    )
+
+    escribir_texto(
+        primer_parrafo_util(filas[5].cells[8]),
+        "Telèfon",
+        tamaño=8
+    )
+    escribir_texto(
+        filas[5].cells[8].paragraphs[-1],
+        obtener_dato_por_fila(datos_control, 8),
+        tamaño=10
+    )
+
+    # --- Fechas y horario ---
+    fecha_final = obtener_dato_por_fila(datos_control, 11)
+    horario = obtener_dato_por_fila(datos_control, 12)
+
+    escribir_texto(
+        primer_parrafo_util(filas[10].cells[0]),
+        f"Data d’inici   {fecha_inicio}        "
+        f"Data de finalització   {fecha_final}",
+        tamaño=8
+    )
+
+    escribir_texto(
+        primer_parrafo_util(filas[11].cells[0]),
+        f"Sessió dia     {fecha_inicio}",
+        tamaño=8
+    )
+
+    escribir_texto(
+        primer_parrafo_util(filas[11].cells[3]),
+        f"Matí  de    {horario}",
+        tamaño=8
+    )
+
+    # --- Alumnos: 10 en la primera página y 10 en la segunda ---
+    filas_alumnos = list(range(14, 24)) + list(range(35, 45))
+
+    for numero, fila_excel in enumerate(filas_alumnos, start=1):
+        fila_word = filas[fila_excel]
+
+        if numero <= len(alumnos):
+            alumno = alumnos[numero - 1]
+
+            apellidos = (
+                f'{alumno["apellido_1"]} {alumno["apellido_2"]}'
+            ).strip()
+
+            nombre = alumno["nombre"]
+            nif = alumno["nif"]
+        else:
+            apellidos = ""
+            nombre = ""
+            nif = ""
+
+        escribir_texto(
+            primer_parrafo_util(fila_word.cells[0]),
+            f"{numero}.",
+            negrita=True
+        )
+        escribir_texto(
+            primer_parrafo_util(fila_word.cells[2]),
+            apellidos,
+            negrita=True
+        )
+        escribir_texto(
+            primer_parrafo_util(fila_word.cells[6]),
+            nombre,
+            negrita=True
+        )
+        escribir_texto(
+            primer_parrafo_util(fila_word.cells[8]),
+            nif,
+            negrita=True
+        )
+
+    # --- Docentes ---
+    docentes = [
+        {
+            "nombre": obtener_dato_por_fila(datos_control, 13),
+            "apellidos": obtener_dato_por_fila(datos_control, 14),
+            "nif": obtener_dato_por_fila(datos_control, 15),
+        },
+        {
+            "nombre": obtener_dato_por_fila(datos_control, 16),
+            "apellidos": obtener_dato_por_fila(datos_control, 17),
+            "nif": obtener_dato_por_fila(datos_control, 18),
+        },
+    ]
+
+    # Docentes mostrados al final de la primera página.
+    for indice, docente in enumerate(docentes):
+        fila_word = filas[26 + indice]
+
+        escribir_texto(
+            primer_parrafo_util(fila_word.cells[0]),
+            docente["apellidos"],
+            negrita=True
+        )
+        escribir_texto(
+            primer_parrafo_util(fila_word.cells[4]),
+            docente["nombre"],
+            negrita=True
+        )
+        escribir_texto(
+            primer_parrafo_util(fila_word.cells[7]),
+            docente["nif"],
+            negrita=True
+        )
+
+    # Docentes repetidos en la segunda página.
+    tabla_docentes = documento.tables[1]
+
+    for indice, docente in enumerate(docentes):
+        fila_word = tabla_docentes.rows[2 + indice]
+
+        escribir_texto(
+            primer_parrafo_util(fila_word.cells[0]),
+            docente["apellidos"],
+            negrita=True
+        )
+        escribir_texto(
+            primer_parrafo_util(fila_word.cells[1]),
+            docente["nombre"],
+            negrita=True
+        )
+        escribir_texto(
+            primer_parrafo_util(fila_word.cells[2]),
+            docente["nif"],
+            negrita=True
+        )
+
+    documento.save(ruta_word)
 
     print(f"\nDocumento creado correctamente:\n{ruta_word}")
 
 def configurar_run(run, negrita=False, tamaño=10):
     run.font.name="Arial"
-    run._element.rPr
+    run._element.rPr.rFonts.set(qn("w:ascii"), "Arial")
+    run._element.rPr.rFonts.set(qn("w:hAnsi"), "Arial")
+    run.font.size = Pt(tamaño)
+    run.bold = negrita
+
+def primer_parrafo_util(celda):
+    for parrafo in celda.paragraphs:
+        if parrafo.text.strip():
+            return parrafo
+
+    return celda.paragraphs[-1]
+
+def escribir_texto(parrafo, texto, negrita=False, tamaño=10):
+    parrafo.clear()
+    #Clear() conserva los detalles del parrafo
+
+    run = parrafo.add_run(str(texto or ""))
+    configurar_run(run, negrita, tamaño)
+
+def escribir_etiqueta_valor(parrafo, etiqueta, valor):
+    parrafo.clear()
+
+    run_etiqueta = parrafo.add_run(f"{etiqueta}: ")
+    configurar_run(run_etiqueta, negrita=True, tamaño=10)
+
+    run_valor = parrafo.add_run(str(valor or ""))
+    configurar_run(run_valor, negrita=False, tamaño=10)
+
+def obtener_dato_por_fila(datos_control, fila_excel):
+    for dato in datos_control:
+        if dato["fila_excel"] == fila_excel:
+            return dato["valor"]
+
+    return ""
 
 # Validar si las selecciones fueron correctas
 if carpeta_destino is None:
