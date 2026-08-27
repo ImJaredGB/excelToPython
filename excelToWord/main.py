@@ -61,7 +61,7 @@ FILA_INICIAL = 3
 FILA_FINAL = 22
 def leer_alumnos(archivo_xls):
     libro = load_workbook(archivo_xls, data_only=True)
-    hoja = libro.active
+    hoja = libro.worksheets[0]
 
     print(f"Hoja que se leerá: {hoja.title}")
 
@@ -258,14 +258,14 @@ def crear_documento_desde_plantilla(carpeta_destino, datos_control, alumnos):
 
     escribir_texto(
         primer_parrafo_util(filas[10].cells[0]),
-        f"Data d’inici   {fecha_inicio}        "
-        f"Data de finalització   {fecha_final}",
+        f"     {fecha_inicio[:10].replace("-", "/")}        "
+        f"Data de finalització   {fecha_final[:10].replace("-", "/")}",
         tamaño=8
     )
 
     escribir_texto(
         primer_parrafo_util(filas[11].cells[0]),
-        f"Sessió dia     {fecha_inicio}",
+        f"Sessió dia     {fecha_inicio[:10].replace("-", "/")}",
         tamaño=8
     )
 
