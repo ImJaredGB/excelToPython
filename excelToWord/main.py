@@ -258,7 +258,7 @@ def crear_documento_desde_plantilla(carpeta_destino, datos_control, alumnos):
 
     escribir_texto(
         primer_parrafo_util(filas[10].cells[0]),
-        f"     {fecha_inicio[:10].replace("-", "/")}        "
+        f"Data d’inici   {fecha_inicio[:10].replace("-", "/")}        "
         f"Data de finalització   {fecha_final[:10].replace("-", "/")}",
         tamaño=8
     )
