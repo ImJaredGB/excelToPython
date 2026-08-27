@@ -170,7 +170,7 @@ def crear_documento_desde_plantilla(carpeta_destino, datos_control, alumnos):
     numero_homologacion = obtener_dato_por_fila(datos_control, 2)
     fecha_inicio = obtener_dato_por_fila(datos_control, 10)
 
-    fecha_archivo = fecha_inicio.replace("/", "")
+    fecha_archivo = fecha_inicio[:10].replace("-", "")
     nombre_archivo = f"{numero_homologacion}_{fecha_archivo}.docx"
     ruta_word = carpeta_destino / nombre_archivo
 
