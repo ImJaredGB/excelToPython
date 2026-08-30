@@ -6,6 +6,7 @@ from docx import Document
 from docx.shared import Pt
 from docx.oxml.ns import qn
 from shutil import copy2
+from datetime import datetime, timedelta
 
 import tkinter as tk
 
@@ -161,7 +162,7 @@ def obtener_dato_por_fila(datos_control, fila_excel):
 
     return ""
 
-def crear_documento_desde_plantilla(carpeta_destino, datos_control, alumnos):
+def crear_documento_desde_plantilla(carpeta_destino, datos_control, alumnos, fecha_sesion):
     if not PLANTILLA.exists():
         raise FileNotFoundError(
             "No se encontró «plantilla_control.docx» junto a main.py."
@@ -170,7 +171,7 @@ def crear_documento_desde_plantilla(carpeta_destino, datos_control, alumnos):
     numero_homologacion = obtener_dato_por_fila(datos_control, 2)
     fecha_inicio = obtener_dato_por_fila(datos_control, 10)
 
-    fecha_archivo = fecha_inicio[:10].replace("-", "")
+    fecha_archivo = fecha_sesion.strftime("%Y%m%d")
     nombre_archivo = f"{numero_homologacion}_{fecha_archivo}.docx"
     ruta_word = carpeta_destino / nombre_archivo
 
@@ -198,10 +199,11 @@ def crear_documento_desde_plantilla(carpeta_destino, datos_control, alumnos):
     )
 
     escribir_texto(
-        primer_parrafo_util(filas[3].cells[0]),
-        "Nom del centre",
+        primer_parrafo_util(filas[11].cells[0]),
+        f"Sessió dia     {fecha_sesion.strftime('%d/%m/%Y')}",
         tamaño=8
     )
+
     escribir_texto(
         filas[3].cells[0].paragraphs[-1],
         obtener_dato_por_fila(datos_control, 4),
@@ -265,7 +267,7 @@ def crear_documento_desde_plantilla(carpeta_destino, datos_control, alumnos):
 
     escribir_texto(
         primer_parrafo_util(filas[11].cells[0]),
-        f"Sessió dia     {fecha_inicio[:10].replace("-", "/")}",
+        f"Sessió dia     {fecha_sesion.strftime('%d/%m/%Y')}",
         tamaño=8
     )
 
@@ -413,6 +415,32 @@ def obtener_dato_por_fila(datos_control, fila_excel):
 
     return ""
 
+def calcular_dias_laborales(fecha_inicio, fecha_final):
+    inicio = datetime.strptime(fecha_inicio[:10], "%Y-%m-%d").date()
+    final = datetime.strptime(fecha_final[:10], "%Y-%m-%d").date()
+
+    dias_laborales = []
+    fecha_actual = inicio
+
+    while fecha_actual <= final:
+        # Monday = 0 ... Sunday = 6
+        if fecha_actual.weekday() < 5:
+            dias_laborales.append(fecha_actual)
+
+        fecha_actual += timedelta(days=1)
+
+    print("\n--- CÁLCULO DE DÍAS LABORALES ---")
+    print(f"Fecha de inicio: {inicio.strftime('%d/%m/%Y')}")
+    print(f"Fecha final:     {final.strftime('%d/%m/%Y')}")
+    print(f"Días laborales:  {len(dias_laborales)}")
+
+    print("\nDías laborales:")
+
+    for dia in dias_laborales:
+        print(dia.strftime("%d/%m/%Y"))
+
+    return dias_laborales
+
 # Validar si las selecciones fueron correctas
 if carpeta_destino is None:
     print("Operacion cancelada")
@@ -431,13 +459,22 @@ alumnos = ordenar_alumnos(alumnos)
 print(f"\nSe han leído {len(alumnos)} alumnos:\n")
 
 datos_control = leer_datos_control(archivo_xls)
+
+fecha_inicio = obtener_dato_por_fila(datos_control, 10)
+fecha_final = obtener_dato_por_fila(datos_control, 11)
+
+dias_laborales = calcular_dias_laborales(fecha_inicio, fecha_final)
+
 print("\nDATOS DEL CONTROL:\n")
 
-crear_documento_desde_plantilla(
-    carpeta_destino,
-    datos_control,
-    alumnos
-)
+
+for fecha_sesion in dias_laborales:
+    crear_documento_desde_plantilla(
+        carpeta_destino,
+        datos_control,
+        alumnos,
+        fecha_sesion
+    )
 
 for alumno in alumnos:
     print(alumno)
