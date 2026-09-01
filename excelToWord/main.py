@@ -7,6 +7,7 @@ from docx.shared import Pt
 from docx.oxml.ns import qn
 from shutil import copy2
 from datetime import datetime, timedelta
+from docx.enum.text import WD_TAB_ALIGNMENT
 
 import tkinter as tk
 
@@ -56,6 +57,27 @@ def normalizar_texto(valor):
         for caracter in normalize("NFD", texto)
         if not ("\u0300" <= caracter <= "\u036F")
     )
+
+def limpiar_numero_excel(valor):
+    if valor is None:
+        return ""
+
+    if isinstance(valor, float) and valor.is_integer():
+        return str(int(valor))
+
+    return str(valor).strip()
+
+def formatear_fecha(valor):
+    if not valor:
+        return ""
+
+    texto = str(valor).strip()
+
+    try:
+        fecha = datetime.strptime(texto[:10], "%Y-%m-%d")
+        return fecha.strftime("%d/%m/%Y")
+    except ValueError:
+        return texto
 
 # Obtener datos de los alumnos
 FILA_INICIAL = 3
@@ -142,7 +164,7 @@ def leer_datos_control(archivo_xls):
             continue
 
         etiqueta = str(celdas_con_valor[0].value).strip()
-        valor = str(celdas_con_valor[-1].value).strip()
+        valor = limpiar_numero_excel(celdas_con_valor[-1].value)
 
         datos_control.append({
             "fila_excel": numero_fila,
@@ -185,6 +207,15 @@ def crear_documento_desde_plantilla(carpeta_destino, datos_control, alumnos, fec
     tabla = documento.tables[0]
     filas = tabla.rows
 
+    for i, fila in enumerate(filas):
+        print(f"\n--- FILA {i} ---")
+
+    for j, celda in enumerate(fila.cells):
+        texto = celda.text.replace("\n", " | ").strip()
+
+        if texto:
+            print(f"  CELDA {j}: {texto}")
+
     # --- Datos del centro ---
     escribir_etiqueta_valor(
         primer_parrafo_util(filas[1].cells[0]),
@@ -198,8 +229,16 @@ def crear_documento_desde_plantilla(carpeta_destino, datos_control, alumnos, fec
         obtener_dato_por_fila(datos_control, 3)
     )
 
+    # --- Sessió dia ---
     escribir_texto(
         primer_parrafo_util(filas[11].cells[0]),
+        f"Sessió dia     {fecha_sesion.strftime('%d/%m/%Y')}",
+        tamaño=8
+    )
+
+    # --- Sessió dia segunda página ---
+    escribir_texto(
+        primer_parrafo_util(filas[32].cells[0]),
         f"Sessió dia     {fecha_sesion.strftime('%d/%m/%Y')}",
         tamaño=8
     )
@@ -258,17 +297,10 @@ def crear_documento_desde_plantilla(carpeta_destino, datos_control, alumnos, fec
     fecha_final = obtener_dato_por_fila(datos_control, 11)
     horario = obtener_dato_por_fila(datos_control, 12)
 
-    escribir_texto(
+    escribir_fechas(
         primer_parrafo_util(filas[10].cells[0]),
-        f"Data d’inici   {fecha_inicio[:10].replace("-", "/")}        "
-        f"Data de finalització   {fecha_final[:10].replace("-", "/")}",
-        tamaño=8
-    )
-
-    escribir_texto(
-        primer_parrafo_util(filas[11].cells[0]),
-        f"Sessió dia     {fecha_sesion.strftime('%d/%m/%Y')}",
-        tamaño=8
+        fecha_inicio,
+        fecha_final
     )
 
     escribir_texto(
@@ -407,6 +439,38 @@ def escribir_etiqueta_valor(parrafo, etiqueta, valor):
 
     run_valor = parrafo.add_run(str(valor or ""))
     configurar_run(run_valor, negrita=False, tamaño=10)
+
+def escribir_fechas(parrafo, fecha_inicio, fecha_final):
+    parrafo.clear()
+
+    # Eliminar los tabuladores que pueda traer la plantilla
+    parrafo.paragraph_format.tab_stops.clear_all()
+
+    # Crear un tabulador fijo para ambas páginas
+    parrafo.paragraph_format.tab_stops.add_tab_stop(
+        Pt(190),
+        WD_TAB_ALIGNMENT.LEFT
+    )
+
+    # Data d'inici
+    run = parrafo.add_run("Data d’inici")
+    configurar_run(run, negrita=True, tamaño=8)
+
+    # Fecha de inicio
+    run = parrafo.add_run(f"   {formatear_fecha(fecha_inicio)}")
+    configurar_run(run, negrita=False, tamaño=8)
+
+    # Separación fija
+    run = parrafo.add_run("\t")
+    configurar_run(run, negrita=False, tamaño=8)
+
+    # Data de finalització
+    run = parrafo.add_run("Data de finalització")
+    configurar_run(run, negrita=True, tamaño=8)
+
+    # Fecha final
+    run = parrafo.add_run(f"   {formatear_fecha(fecha_final)}")
+    configurar_run(run, negrita=False, tamaño=8)
 
 def obtener_dato_por_fila(datos_control, fila_excel):
     for dato in datos_control:
